@@ -1,0 +1,6 @@
+---
+databases:
+  - name: mptd_master
+    tables:
+      - Orders
+      - Accounts
