@@ -5,7 +5,7 @@ Defines DatabaseSocket class
 """
 import logging
 import mysql.connector
-from lang.SQL.queries import Query, InvalidQueryError
+from Database.lang.SQL.queries import Query, InvalidQueryError
 
 
 log_fmt = '%(levelname)s\t: %(filename)s\t:%(lineno)d\t:%(funcName)s\t:%(message)s'
