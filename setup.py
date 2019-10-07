@@ -6,5 +6,8 @@ setup(
     packages=find_packages('src'),
     package_dir={'': './src'},
     python_requires='>=3.6',
+    install_requires=['mysql-connector-python',
+                      'PYYaml',
+                      'v20']
     # url='https://github.com/damyngz/mptd.git'
 )

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import view.time as t_format
+
 import os, time, platform, csv
-from view.time import RFC3339
+from ..view.time import RFC3339
 
 """
 Value	Description
@@ -175,7 +175,7 @@ class FileHandler:
 
     def format_time(self, date):
         if self.datetime_formatter == 'RFC3339':
-            s = t_format.RFC3339.to_str(date=date, fmt_string="%d%m%Y%H%M%S")
+            s = RFC3339.to_str(date=date, fmt_string="%d%m%Y%H%M%S")
 
         elif self.datetime_formatter == 'unix':
             raise NotImplementedError

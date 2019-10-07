@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractclassmethod
-from args import *
+from ..args import *
 
 
 def _concat(args_dict):
