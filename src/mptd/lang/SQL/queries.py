@@ -37,7 +37,8 @@ class Select:
         pass
 
     @staticmethod
-    def select
+    def select():
+        pass
 
 
 class Query:

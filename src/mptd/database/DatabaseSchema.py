@@ -1,5 +1,5 @@
 import json, logging
-from ..lang.SQL.queries import Query
+from src.mptd.lang.SQL import Query
 
 logger = logging.getLogger(__name__)
 
