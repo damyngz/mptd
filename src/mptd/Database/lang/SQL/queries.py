@@ -1,8 +1,8 @@
 """
 package for holding sql query wrappers
 """
-
 import os, yaml, logging
+from re import sub
 from .args import DEFAULT_PRIVILEGE_LIST
 
 logging.basicConfig(level=logging.DEBUG)
@@ -13,42 +13,74 @@ class InvalidQueryError(Exception):
     pass
 
 
-class Query:
+class QueryError:
+    # _errors = [Error, DatabaseError, IntegrityError]
+
+    def __init__(self, sql_error):
+
+        # TODO typechecking for SQL errors? <circular imports, DatabaseSocket>
+        # if True in [isinstance(sql_error, err) for err in self._errors]:
+        #
+        #     self.err_type = 'unexpected error <{}>'.format(type(sql_error).__name__)
+        #     self.err_msg = '{}'.format(sql_error.__str__())
+        # else:
+        self.err_type = type(sql_error).__name__
+        self.err_msg = sql_error.__str__()
+
+    def __str__(self):
+        return '{} : {}'.format(self.err_type, self.err_msg)
+
+
+class Select:
+    @staticmethod
+    def select_candles():
+        pass
 
     @staticmethod
-    def select_values(
-                      table_name,
-                      list_cols=None,
-                      limit=None):
+    def select
 
-        # limit can be tuple, int, or specific str (eg. top 500, bot 500)
-        # TODO implement extended 'limit' param functionality
 
-        if list_cols is None:
-            cols = '*'
-        elif isinstance(list, list_cols):
-            cols = ''
-            for col in list_cols:
-                cols += col + ', '
-            cols.strip().strip(',')
-        elif isinstance(str, list_cols):
-            cols = list_cols
-        else:
-            raise InvalidQueryError('Invalid list_cols passed. Must be list, str or None')
+class Query:
 
-        outp = 'select {} from {}'.format(cols, table_name)
-        if limit and (isinstance(tuple, limit) or isinstance(int, limit)):
-            limit_s = 'limit {}'.format(limit)
-        else:
-            raise InvalidQueryError('Invalid limit passed. Must be tuple (of ints) or int.')
-
-        return outp + ';'
+    # TODO rethink need for query method for select
+    # @staticmethod
+    # def select_values(table_name,
+    #                   list_cols=None,
+    #                   limit=None,
+    #                   order=None,
+    #                   group=None):
+    #
+    #     #
+    #     # list_cols, list of columns to return in query
+    #     if list_cols is None:
+    #         cols = '*'
+    #     elif isinstance(list_cols, list):
+    #         cols = ''
+    #         for col in list_cols:
+    #             cols += col + ', '
+    #         cols.strip().strip(',')
+    #     elif isinstance(list_cols, str):
+    #         cols = list_cols
+    #     else:
+    #         raise InvalidQueryError('Invalid list_cols passed. Must be list, str or None')
+    #
+    #     #
+    #     # limit number of queries returned
+    #     outp = 'select {} from {}'.format(cols, table_name)
+    #     if limit and (isinstance(limit, tuple) or isinstance(limit, int)):
+    #         limit_s = 'limit {}'.format(sub(r"[()]", '', str(limit)))
+    #     else:
+    #         raise InvalidQueryError('Invalid limit passed. Must be tuple (of ints) or int.')
+    #
+    #     #
+    #     # order by parameters eg. {'param(s)': 'asc'}
+    #     return outp + ';'
 
     @staticmethod
     def insert_value(values, table_name):
         def get_type(t, val):
-            print(t, t.lower() in ['char(255)','varchar(255)','time','datetime','timestamp'])
-            if t.lower() in ['char(255)','varchar(255)','time','datetime','timestamp']:
+            print(t, t.lower() in ['char(255)', 'varchar(255)', 'time', 'datetime', 'timestamp'])
+            if t.lower() in ['char(255)', 'varchar(255)', 'time', 'datetime', 'timestamp']:
                 print('\'' + str(val) + '\'')
                 return '\'' + str(val) + '\''
             return str(val)
@@ -100,6 +132,14 @@ class Query:
 
          }
 
+         kwargs:
+            mode: returns query for method of creating table
+                accepted parameters:
+                (str)
+                'graceful': creates a table if none exists
+                'force':    forces a new table, will override old table
+                'safe' TODO
+
         :param name: name of table;
         :param attr_dict: dict() of column names to dtype (in str);
         :param attr_file: file path to a .yml file with appropriate scheme for the table, overrides attr_dict if defined;
@@ -113,9 +153,9 @@ class Query:
         class InvalidTableSchemeError(Exception):
             pass
 
-        try:
+        if attr_file is not None:
             try:
-                if attr_file:
+                try:
                     if not os.path.isfile(attr_file):
                         raise FileNotFoundError
 
@@ -126,21 +166,21 @@ class Query:
                         except yaml.YAMLError as err:
                             logging.error(err)
 
-            except FileNotFoundError as err:
-                logging.error('{}: {} is not a valid path.'.format(type(err).__name__, attr_file))
+                except FileNotFoundError as err:
+                    logging.error('{}: {} is not a valid path.'.format(type(err).__name__, attr_file))
 
-            if not(isinstance(attr_dict, dict)):
-                raise InvalidTableSchemeError
-            else:
-                # TODO add multiple primary key declaration checks?
-                for k, v in attr_dict.items():
-                    if 'dtpye' not in v and k != 'primary key':
-                        raise InvalidTableSchemeError
-                    if not(isinstance(k, str)) or not(isinstance(v, dict)):
-                        raise InvalidTableSchemeError
+                if not(isinstance(attr_dict, dict)):
+                    raise InvalidTableSchemeError
+                else:
+                    # TODO add multiple primary key declaration checks?
+                    for k, v in attr_dict.items():
+                        if 'dtpye' not in v and k != 'primary key':
+                            raise InvalidTableSchemeError
+                        if not(isinstance(k, str)) or not(isinstance(v, dict)):
+                            raise InvalidTableSchemeError
 
-        except InvalidTableSchemeError as err:
-            logging.error('{}: Invalid datatype or values, values must be in dicts.'.format(type(err).__name__))
+            except InvalidTableSchemeError as err:
+                logging.error('{}: Invalid datatype or values, values must be in dicts.'.format(type(err).__name__))
 
         outp = 'create table {} ('.format(name)
         for k, v in attr_dict.items():
@@ -148,7 +188,7 @@ class Query:
 
             if k != 'primary key':
                 # TODO error checking for additional args
-                if len(list(v)) > 1:
+                if len(list(v)) > 1 and 'args' in v and len(v['args']) > 1:
                     for param in v['args']:
                         p_str += '{} '.format(param)
 
@@ -182,8 +222,17 @@ class Query:
                     user_privileges,
                     user_host=None):
 
-        user_s = 'create user \'{user_name}\'@\'{user_host}\' \
-        identified with native_mysql_password by {user_passwd};'.format(
+        """
+        # TODO creates user if it dosen't exist, might create problems with namespace clash
+        :param user_name:
+        :param user_password:
+        :param user_privileges:
+        :param user_host:
+        :return:
+        """
+
+        user_s = 'create user if not exists \'{user_name}\'@\'{user_host}\' \
+identified with mysql_native_password by \'{user_passwd}\';'.format(
             user_name=user_name,
             user_host=user_host,
             user_passwd=user_password
@@ -191,27 +240,26 @@ class Query:
 
         # TODO implement privilege validation
 
-        if not isinstance(dict, p):
+        if not isinstance(user_privileges, dict):
             raise InvalidQueryError("user_privileges must be a dict. \
                                     {tables: [list_privileges]}")
 
         privilege_s = ''
         for tables in list(user_privileges):
             privilege_s_ = 'grant '
-            if not isinstance(list, user_privileges[tables]):
+            if not isinstance(user_privileges[tables], list):
                 raise InvalidQueryError("{} is not a list.".format(user_privileges[tables]))
 
             for p in user_privileges[tables]:
                 if p.upper() in DEFAULT_PRIVILEGE_LIST:
                     privilege_s_ += '{}, '.format(p)
                 else:
-                    # TODO raise warning or Error for invalid privilege passed
-                    pass
+                    raise InvalidQueryError('{} is not a valid sql privilege'.format(p))
 
-            privilege_s_.strip().strip(',')
-            privilege_s_ += ' on {} to {};'.format(tables, user_name)
+            privilege_s_ = privilege_s_.strip().strip(',')
+            privilege_s_ += ' on {} to \'{}\'@\'{}\';'.format(tables, user_name, user_host)
             privilege_s += privilege_s_
 
-        return user_s + privilege_s
+        return [user_s, privilege_s]
 
 

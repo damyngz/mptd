@@ -378,5 +378,5 @@ def instrument_pricing_stream(api,
             elif m_type == "pricing.PricingHeartbeat":
                 if show_heartbeats:
                     # TODO not implemented
-                    pass
+                    raise NotImplementedError
                 pass

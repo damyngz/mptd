@@ -3,9 +3,10 @@ Defines DatabaseSocket class
 ; connects to a mysql database
 
 """
-import logging
+import sys, logging, traceback
 import mysql.connector
-from Database.lang.SQL.queries import Query, InvalidQueryError
+from mysql.connector.errors import InterfaceError
+from ..lang.SQL.queries import InvalidQueryError, QueryError
 
 
 log_fmt = '%(levelname)s\t: %(filename)s\t:%(lineno)d\t:%(funcName)s\t:%(message)s'
@@ -42,14 +43,20 @@ class DatabaseSocket:
                     missing_args.append(key)
 
             logger.error("{}: Incomplete population of database information. Missing: {}\n".format(type(err).__name__,
-                                                                                            str(missing_args).strip('[]')))
+                                                                                                   str(missing_args).strip('[]')))
         if 'port' in kwargs:
             self.port = kwargs['port']
 
-    def __check_connection(self):
+    def __check_connection(self, correct=False):
         try:
             if self.cursor is None:
+                if correct:
+                    if self.db is None:
+                        raise NotConnectedError
+                    self.cursor = self.db.cursor()
+            else:
                 raise NotConnectedError
+
         except NotConnectedError as err:
             print("{}: DatabaseSocket for {dbsock_user}@{dbsock_host} has no active connection.".format(type(err).__name__,
                                                                                                         dbsock_user=self.user,
@@ -98,19 +105,51 @@ class DatabaseSocket:
             v = self.verbose
         if q is None:
             return
-        # if v is True:
-        #     print(q)
+
         try:
-            # TODO validate query strings
-            # if isinstance(q, Query):
-            self.cursor.execute(q)
+            # TODO validate query strings?
+            if isinstance(q,str):
+                self.cursor.execute(q)
+            elif isinstance(q, list):
+                for q_ in q:
+                    if isinstance(q_, str):
+                        logger.debug('passing query {}'.format(q_))
+                        self.cursor.execute(q_)
+                        self.db.commit()
+                    else:
+                        logger.warning("q_ is not str, q_ is {} type".format(type(q_).__name__))
+
             self.db.commit()
-            # else:
-            #     raise InvalidQueryError
+
         except InvalidQueryError:
             print('{}: Invalid query passed.'.format(type(InvalidQueryError.__name__)))
+
+        except:
+            err_log = sys.exc_info()
+            traceback.print_tb(err_log[-1])
+            logger.error("{err_type} -> {err_msg}".format(err_type=err_log[0].__name__,
+                                                          err_msg=err_log[1]))
+            # logger.critical(sys.exc_info()[0].__name__)
+            # logger.critical(traceback.print_tb(sys.exc_info()[-1]))
+            # logging.error(sqlerr)
+            # TODO return msg to outer function
 
         if v is True:
             for line in self.cursor:
                 logger.info(line)
-                print(line)
+
+    def pulse(self, db, query):
+        logger.debug('pulse query -> {}'.format(query))
+        try:
+            self.connect(db=db)
+            self.pass_query(query)
+            self.disconnect()
+
+        except:
+            err_log = sys.exc_info()
+            # TODO create separate logger for tracebacks?
+            # logger.error(traceback.print_tb(sys.exc_info()[-1]))
+            logger.error('Error during DBsock pulse:{}:{}'.format(err_log[0].__name__,
+                                                                  err_log[1]))
+
+
