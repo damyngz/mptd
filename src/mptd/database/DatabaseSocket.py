@@ -16,8 +16,8 @@ class IncompleteAuthError(Exception):
     pass
 
 
-class NotConnectedError(Exception):
-    pass
+# class NotConnectedError(Exception):
+#     pass
 
 
 class DatabaseSocket:
@@ -49,19 +49,19 @@ class DatabaseSocket:
     def __check_connection(self, correct=False):
         pass
 
-        # try:
-        #     if self.cursor is None:
-        #         if correct:
-        #             if self.db is None:
-        #                 raise NotConnectedError
-        #             self.cursor = self.db.cursor()
-        #     else:
-        #         raise NotConnectedError
-        #
-        # except NotConnectedError as err:
-        #     logger.error("{}: DatabaseSocket for {dbsock_user}@{dbsock_host} has no active connection.".format(type(err).__name__,
-        #                                                                                                        dbsock_user=self.user,
-        #                                                                                                        dbsock_host=self.host))
+# try:
+#     if self.cursor is None:
+#         if correct:
+#             if self.db is None:
+#                 raise NotConnectedError
+#             self.cursor = self.db.cursor()
+#     else:
+#         raise NotConnectedError
+#
+# except NotConnectedError as err:
+#     logger.error("{}: DatabaseSocket for {dbsock_user}@{dbsock_host} has no active connection.".format(type(err).__name__,
+#                                                                                                        dbsock_user=self.user,
+#                                                                                                        dbsock_host=self.host))
 
     def set_verbosity(self, v):
         if isinstance(v, bool):
@@ -100,7 +100,7 @@ class DatabaseSocket:
         self.db.disconnect()
 
     def pass_query(self, q, return_result=False):
-        self.__check_connection()
+        # self.__check_connection()
         # if v is None:
         #     v = self.verbose
         if q is None:
@@ -108,6 +108,7 @@ class DatabaseSocket:
 
         try:
             # TODO validate query strings?
+            # TODO need more elegant way to decide db.commit() or not
             if isinstance(q, str):
                 self.cursor.execute(q)
                 if not q.lower().startswith('select'):

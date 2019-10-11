@@ -10,7 +10,7 @@ class BaseResourceConfigError(Exception):
         self.err_log = e
 
     def __str__(self):
-        if isinstance(self.err_log, list):
+        if isinstance(self.err_log, tuple):
             err_type = self.err_log[0].__name__
             err_msg = self.err_log[1]
             return 'An error occured while loading BaseResource config.({}:{})'.format(err_type, err_msg)

@@ -274,13 +274,15 @@ def instrument_candle_request(api,
                               instrument,
                               granularity=None,
                               count=500,
-                              logger=None,
-                              poll_rate=DEFAULT_POLL_RATE,
-                              write_to_file=False,
+                              add_args=None
                               ):
+    if add_args is None:
+        add_args = {}
     kwargs = {'granularity': granularity,
-              'count': count}
+              'count': count,
+              **add_args}
 
+    print(kwargs)
     response = api.context.instrument.candles(instrument, **kwargs)
     candles = response.get('candles', 200)
     return candles
