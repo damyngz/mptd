@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import os, time, platform, csv
+from v20.instrument import Candlestick
+from datetime import datetime
 from ..view.time import RFC3339
 
 """
@@ -32,7 +34,6 @@ DEFAULT_POLL_RATE = 1
 DEFAULT_PATH_DIRECTORY_WINDOWS = R'C:\Users\$USERNAME'
 DEFAULT_PATH_DIRECTORY_LINUX = R'~/logs/'
 DEFAULT_PATH_DIRECTORY = ''
-
 
 # TODO implement logger objects
 # TODO set proper default paths
@@ -129,7 +130,13 @@ def get_tick(candle, g):
 
     degree = g_dict[g[0].upper()]
     magnitude = int(g[1:])
-    candle_o = RFC3339.to_obj(candle.time)
+    if isinstance(candle, Candlestick):
+        candle_o = RFC3339.to_obj(candle.time)
+    elif isinstance(candle, datetime):
+        candle_o = candle
+    else:
+        pass
+        # TODO raise error?
     s = _seconds(candle_o)//(degree*magnitude)
     # TODO implement check if calculation is exact (should produce float x.0, no dec places)
 

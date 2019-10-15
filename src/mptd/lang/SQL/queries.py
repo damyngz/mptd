@@ -184,31 +184,31 @@ class Query:
                 logging.error('{}: Invalid datatype or values, values must be in dicts.'.format(type(err).__name__))
 
         outp = 'create table {} ('.format(name)
-        for k, v in attr_dict.items():
+        for k, v in attr_dict["columns"].items():
             p_str = ''
 
-            if k != 'primary key':
-                # TODO error checking for additional args
-                if len(list(v)) > 1 and 'args' in v and len(v['args']) > 1:
-                    for param in v['args']:
-                        p_str += '{} '.format(param)
+            # TODO error checking for additional args
+            if len(list(v)) > 1 and 'args' in v and len(v['args']) > 0:
+                for param in v['args']:
+                    p_str += '{} '.format(param)
 
-                outp += '{} {} {},'.format(k, v['dtype'], p_str.strip())
+            outp += '{} {} {},'.format(k, v['dtype'], p_str.strip())
 
-            # TODO change to else if no other params to add
-            elif k == 'primary key':
-                outp += '{} ('.format(k)
-                for col in v['struct']:
-                    outp += '{}, '.format(col)
-                outp.strip().strip(',')
-                outp += ') '
+
+
+        if "primary_key" in attr_dict:
+            outp += 'constraint {} primary key ('.format(attr_dict['primary_key']['name'])
+            for i in attr_dict["primary_key"]["columns"]:
+                outp += '{}, '.format(i)
+            outp = outp.strip().strip(',') + ')'
+
         # kwargs optional arguments
         # if ("primary_key" in kwargs and kwargs['primary_key'] is not None) or \
         #         False:
         #     outp += 'primary key ({}),'.format(kwargs['primary_key'])
 
         # removes last ','
-        outp = outp[:-1] + ')'
+        outp = outp.strip().strip(',')+ ')'
         if "method" in kwargs:
             if kwargs['method'].lower() == 'graceful':
                 outp = outp.replace('create table', 'create table if not exists')
