@@ -78,7 +78,14 @@ class Query:
     #     return outp + ';'
 
     @staticmethod
-    def insert_value(values, table_name):
+    def insert_value(values, table_name, cluster_size=None):
+        """
+                :param table_name:
+                :param values:
+                :param cluster_size: defaults to None, size of rows to group into single query
+                :return: string in sql
+        """
+
         def get_type(t, val):
             print(t, t.lower() in ['char(255)', 'varchar(255)', 'time', 'datetime', 'timestamp'])
             if t.lower() in ['char(255)', 'varchar(255)', 'time', 'datetime', 'timestamp']:
@@ -86,41 +93,51 @@ class Query:
                 return '\'' + str(val) + '\''
             return str(val)
 
-        """
-        :param table_name:
-        :param values:
-        :return: string in sql
-        """
+        def _make_query(values_, table_name_):
+            if not values_:
+                return None
 
-        if not values:
-            return None
+            outp, col_s = '', ''
+            cols = []
+            for col in values_[0].keys():
+                cols.append(col)
 
-        outp, col_s = '', ''
-        cols = []
-        for col in values[0].keys():
-            cols.append(col)
-
-        for col in cols:
-            col_s += col + ', '
-
-        col_s = col_s.strip().strip(',')
-        s = "insert into {t_name} ({column_string}) values ".format(t_name=table_name,
-                                                                    column_string=col_s, )
-        vals_s = ''
-        for value in values:
-            val_s = ''
             for col in cols:
-                if isinstance(value[col], str):
-                    val_s += '\'' + value[col] + '\'' + ', '
-                else:
-                    val_s += str(value[col]) + ', '
+                col_s += col + ', '
 
-            val_s = val_s.strip().strip(',')
-            vals_s += '({}),'.format(val_s)
+            col_s = col_s.strip().strip(',')
+            s = "insert into {t_name} ({column_string}) values ".format(t_name=table_name_,
+                                                                        column_string=col_s, )
+            vals_s = ''
+            for value in values_:
+                val_s = ''
+                for col in cols:
+                    if isinstance(value[col], str):
+                        val_s += '\'' + value[col] + '\'' + ', '
+                    else:
+                        val_s += str(value[col]) + ', '
 
-        vals_s = vals_s.strip(',')
-        outp = s + vals_s
-        return outp + ';'
+                val_s = val_s.strip().strip(',')
+                vals_s += '({}),'.format(val_s)
+
+            vals_s = vals_s.strip(',')
+            outp = s + vals_s
+            return outp + ';'
+
+        if cluster_size is None:
+            return _make_query(values_=values, table_name_=table_name)
+
+        # TODO unstable, remove this tag once stable
+        elif isinstance(cluster_size, int) and cluster_size > 0:
+            outp = []
+            for i in range(0, len(values), cluster_size):
+                j = i + cluster_size
+                if j > len(values):
+                    j = len(values)
+                q = _make_query(values_=values[i:j], table_name_=table_name)
+                outp.append(q)
+            return outp
+
 
     @staticmethod
     def create_table(name, attr_dict, attr_file=None, **kwargs):
@@ -193,8 +210,6 @@ class Query:
                     p_str += '{} '.format(param)
 
             outp += '{} {} {},'.format(k, v['dtype'], p_str.strip())
-
-
 
         if "primary_key" in attr_dict:
             outp += 'constraint {} primary key ('.format(attr_dict['primary_key']['name'])

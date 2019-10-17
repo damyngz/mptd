@@ -109,6 +109,7 @@ def get_tick(candle, g):
               "H": 3600}
 
     # value declared to reduce calculations
+    # len of ticks
     max_ticks = {'S5': 17280,
                  'S10': 8640,
                  'S15': 5760,

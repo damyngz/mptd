@@ -100,40 +100,60 @@ class DatabaseSocket:
         self.db.disconnect()
 
     def pass_query(self, q, return_result=False):
+
+        def __execute_and_commit(q_str, print_traceback=self.verbose):
+            try:
+                self.cursor.execute(q_str)
+                if not q_str.lower().startswith('select'):
+                    self.db.commit()
+                return 1
+
+            except InvalidQueryError:
+                print('{}: Invalid query passed.'.format(type(InvalidQueryError.__name__)))
+
+            except:
+                err_log = sys.exc_info()
+                if print_traceback:
+                    traceback.print_tb(err_log[-1])
+                if self.verbose:
+                    logger.error("{err_type} -> {err_msg}".format(err_type=err_log[0].__name__,
+                                                                  err_msg=err_log[1]))
+                return 0
         # self.__check_connection()
         # if v is None:
         #     v = self.verbose
         if q is None:
             return
 
-        try:
-            # TODO validate query strings?
-            # TODO need more elegant way to decide db.commit() or not
-            if isinstance(q, str):
-                self.cursor.execute(q)
-                if not q.lower().startswith('select'):
-                    self.db.commit()
-            elif isinstance(q, list):
-                for q_ in q:
-                    if isinstance(q_, str):
-                        # redacted log
+        # TODO validate query strings?
+        # TODO need more elegant way to decide db.commit() or not
+        count_pass = 0
+        if isinstance(q, str):
+            count_pass = __execute_and_commit(q)
+            num_queries = 1
+        elif isinstance(q, list):
+            num_queries = 0
+            for q_ in q:
+                if isinstance(q_, str):
+                    # redacted log
+                    if self.verbose:
                         logger.debug('passing query of {} chars'.format(len(q_)))
-                        self.cursor.execute(q_)
-                        if not q_.lower().startswith('select'):
-                            self.db.commit()
-                    else:
-                        logger.warning("q_ is not str, q_ is {} type".format(type(q_).__name__))
+                        logger.debug('query->{}'.format(q_))
+                    count_pass += __execute_and_commit(q_)
+                    num_queries += 1
+                else:
+                    logger.warning("q_ is not str, q_ is {} type".format(type(q_).__name__))
+
+        else:
+            num_queries = 0
+
+        logging.info("{}/{} queries successful. ({:5f}%)".format(count_pass,
+                                                                 num_queries,
+                                                                 100 * (count_pass/num_queries)))
 
             # self.db.commit()
 
-        except InvalidQueryError:
-            print('{}: Invalid query passed.'.format(type(InvalidQueryError.__name__)))
 
-        except:
-            err_log = sys.exc_info()
-            traceback.print_tb(err_log[-1])
-            logger.error("{err_type} -> {err_msg}".format(err_type=err_log[0].__name__,
-                                                          err_msg=err_log[1]))
 
         if return_result is True:
             output = []
