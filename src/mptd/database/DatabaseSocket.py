@@ -151,11 +151,14 @@ class DatabaseSocket:
                                                                  num_queries,
                                                                  100 * (count_pass/num_queries)))
 
-            # self.db.commit()
-
-
+        # self.db.commit()
 
         if return_result is True:
+            if self.cursor.description is None:
+                logger.warning("Query returned null results.")
+                if self.verbose:
+                    logger.debug(self.cursor)
+                return None
             output = []
             columns = tuple([col_tuple[0] for col_tuple in self.cursor.description])
             output.append(columns)
