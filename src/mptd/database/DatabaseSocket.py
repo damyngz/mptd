@@ -45,6 +45,9 @@ class DatabaseSocket:
         if 'port' in kwargs:
             self.port = kwargs['port']
 
+        if 'verbose' in kwargs:
+            self.verbose = kwargs['verbose']
+
     # TODO redo and stabilise check_connection method
     def __check_connection(self, correct=False):
         pass
