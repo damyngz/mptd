@@ -102,11 +102,19 @@ def get_tick(candle, g):
     def _seconds(dt_obj):
         return dt_obj.second + (60 * dt_obj.minute) + (3600 * dt_obj.hour)
 
+    def _days(dt_obj):
+        return dt_obj.timetuple().tm_yday
+
+    def _weeks(dt_obj):
+        return dt_obj.isocalendar()[1]
+
     # 86400 seconds in a day, pre-calculated to reduce load
     ticks = 86400
     g_dict = {"S": 1,
               "M": 60,
-              "H": 3600}
+              "H": 3600,
+              "D": 1,
+              "W": 1}
 
     # value declared to reduce calculations
     # len of ticks
@@ -127,18 +135,30 @@ def get_tick(candle, g):
                  'H4': 6,
                  'H6': 4,
                  'H8': 3,
-                 'H12': 2}
+                 'H12': 2,
+                 'D': 366,
+                 'W': 52}
 
     degree = g_dict[g[0].upper()]
-    magnitude = int(g[1:])
+    magnitude = int(g[1:]) if len(g) > 1 else 1
     if isinstance(candle, Candlestick):
         candle_o = RFC3339.to_obj(candle.time)
     elif isinstance(candle, datetime):
         candle_o = candle
     else:
-        pass
-        # TODO raise error?
-    s = _seconds(candle_o)//(degree*magnitude)
+        raise InvalidTickError("Improper 'candle' argument passed. Must be Candle or datetime ")
+
+    if g not in ['D', 'W']:
+        s = _seconds(candle_o) // (degree * magnitude)
+        fmt_str = '%Y%m%d'
+    else:
+        if g == 'D':
+            s = _days(candle_o)
+            fmt_str = '%Y'
+        else:
+            s = _weeks(candle_o)
+            fmt_str = '%Y'
+
     # TODO implement check if calculation is exact (should produce float x.0, no dec places)
 
     # ensure ticks does not overflow max_ticks
