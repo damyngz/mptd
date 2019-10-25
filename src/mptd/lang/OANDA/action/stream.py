@@ -168,7 +168,7 @@ def get_tick(candle, g):
             max_ticks=max_ticks[g],
             granularity=g
         ))
-    tick = RFC3339.to_str(candle_o, '%Y%m%d') + str(s).zfill(len(str(max_ticks[g])))
+    tick = RFC3339.to_str(candle_o, fmt_str) + str(s).zfill(len(str(max_ticks[g])))
     return {'tick': tick}
 
 
@@ -302,7 +302,8 @@ def instrument_candle_request(api,
                               instrument,
                               granularity=None,
                               count=500,
-                              add_args=None
+                              add_args=None,
+                              force_complete=True
                               ):
     if add_args is None:
         add_args = {}
@@ -310,9 +311,16 @@ def instrument_candle_request(api,
               'count': count,
               **add_args}
 
-    print(kwargs)
+    # print(kwargs)
     response = api.context.instrument.candles(instrument, **kwargs)
     candles = response.get('candles', 200)
+
+    if force_complete:
+        candles_ = []
+        for candle in candles:
+            if candle.complete:
+                candles_.append(candle)
+        return candles_
     return candles
 
 
@@ -322,7 +330,8 @@ def instrument_candle_poll(api,
                            logger=None,
                            poll_rate=DEFAULT_POLL_RATE,
                            write_to_file=False,
-                           tick_label=False
+                           tick_label=False,
+                           stream=True
                            ):
     if write_to_file:
         fh = FileHandler(path=DEFAULT_PATH_DIRECTORY,
@@ -335,12 +344,14 @@ def instrument_candle_poll(api,
                       add_ticks=tick_label)
     while True:
         kwargs = {'granularity': granularity}
-
         response = api.context.instrument.candles(instrument, **kwargs)
         candles = response.get('candles', 200)
 
         # yield date_time, open, high, low, close, volume
-        yield ch.pop_candle(candles)
+        if stream:
+            yield candles[-5:]
+        else:
+            yield ch.pop_candle(candles)
 
         if write_to_file:
             fh.update(candles)
